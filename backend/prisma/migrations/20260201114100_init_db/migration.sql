@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "ApiKey" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "usage" INTEGER NOT NULL DEFAULT 0,
+    "errors" INTEGER NOT NULL DEFAULT 0,
+    "lastUsed" BIGINT NOT NULL DEFAULT 0,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

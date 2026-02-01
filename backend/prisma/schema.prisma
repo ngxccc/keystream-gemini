@@ -1,0 +1,21 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model ApiKey {
+  key       String   @id
+  status    String   @default("active") // active, cooldown, exhausted
+  usage     Int      @default(0)
+  errors    Int      @default(0)
+  lastUsed  BigInt   @default(0) // BigInt để lưu timestamp (Date.now())
+  createdAt DateTime @default(now())
+}
