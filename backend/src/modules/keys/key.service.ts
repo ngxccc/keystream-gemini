@@ -12,37 +12,36 @@ const prisma = new PrismaClient({ adapter });
 type ApiKeyDTO = Omit<ApiKey, "lastUsed"> & { lastUsed: number };
 
 export class KeyService {
-  public async getOptimalKey(): Promise<string | null> {
+  public async getAndLockOptimalKey(): Promise<string | null> {
     const now = BigInt(Date.now());
     const cooldownTime = BigInt(envConfig.KEY_COOLDOWN_TIME);
 
-    // Ưu tiên 1: Key đang active, sắp xếp theo lastUsed (lâu chưa dùng nhất)
-    const activeKey = await prisma.apiKey.findFirst({
-      where: { status: "active" },
-      orderBy: { lastUsed: "asc" },
+    return await prisma.$transaction(async (tx) => {
+      const candidate = await tx.apiKey.findFirst({
+        where: {
+          OR: [
+            { status: "active" },
+            { status: "cooldown", lastUsed: { lt: now - cooldownTime } },
+          ],
+        },
+        orderBy: { lastUsed: "asc" },
+      });
+
+      if (!candidate) return null;
+
+      await tx.apiKey.update({
+        where: { key: candidate.key },
+        data: {
+          status: "active",
+          lastUsed: now,
+          usage: { increment: 1 },
+        },
+      });
+
+      return candidate.key;
     });
-
-    if (activeKey) return activeKey.key;
-
-    // Ưu tiên 2: Key đang cooldown nhưng đã hết hạn cooldown
-    // Logic: lastUsed + 60s < now
-    const recoveredKey = await prisma.apiKey.findFirst({
-      where: {
-        status: "cooldown",
-        lastUsed: { lt: now - cooldownTime },
-      },
-    });
-
-    if (recoveredKey) {
-      // Auto reset trạng thái active cho key này
-      await this.updateKeyStatus(recoveredKey.key, "active");
-      return recoveredKey.key;
-    }
-
-    return null;
   }
 
-  // 3. Update trạng thái (Thay thế updateKeyStatus)
   public async updateKeyStatus(key: string, status: string) {
     await prisma.apiKey.update({
       where: { key },

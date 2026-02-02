@@ -16,6 +16,10 @@ model ApiKey {
   status    String   @default("active") // active, cooldown, exhausted
   usage     Int      @default(0)
   errors    Int      @default(0)
+  rpmLimit        Int      @default(15) // Flash=15, Pro=2, Free=60...
+  availableAt     BigInt   @default(0)  // Thời điểm key sẽ hồi xong
   lastUsed  BigInt   @default(0) // BigInt để lưu timestamp (Date.now())
   createdAt DateTime @default(now())
+
+  @@index([status, availableAt]) // Đánh index lại để query cho nhanh
 }

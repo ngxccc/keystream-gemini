@@ -35,6 +35,7 @@ const configSchema = z.object({
   KEY_COOLDOWN_TIME: z.coerce.number().default(60000),
   MODEL_FETCH_INTERVAL: z.coerce.number().default(3600000),
   INITIAL_MODEL_FETCH_DELAY: z.coerce.number().default(2000),
+  MAX_RETRIES: z.coerce.number().default(5),
   DATABASE_URL: z.string(),
 });
 

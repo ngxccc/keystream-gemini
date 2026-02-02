@@ -16,3 +16,29 @@ export interface ILogEntry {
   message: string;
   timestamp: string;
 }
+
+export interface IGeminiModel {
+  name: string;
+  version: string;
+  displayName: string;
+  description: string;
+  inputTokenLimit: number;
+  outputTokenLimit: number;
+  supportedGenerationMethods: string[];
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxTemperature?: number;
+  thinking?: boolean;
+}
+
+export interface IGeminiModelListResponse {
+  models: IGeminiModel[];
+}
+
+export interface ICategorizedModels {
+  text: string[]; // Model chat (generateContent)
+  image: string[]; // Model vẽ tranh (predict - Imagen)
+  video: string[]; // Model tạo video (predictLongRunning - Veo)
+  embedding: string[]; // Model embedding (embedContent)
+}

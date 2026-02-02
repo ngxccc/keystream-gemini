@@ -30,16 +30,17 @@ try {
   geminiService.initializeModelFetching();
   statsService.initialize();
   console.log("✅ Services Initialized");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} catch (error: any) {
-  console.error("❌ Failed to initialize services:", error.message);
+} catch (error) {
+  console.error(
+    "❌ Failed to initialize services:",
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(1);
 }
 
 // --- Routes Wiring ---
 app.use("/api/keys", keyRoutes); // Quản lý Key
 app.use("/v1/chat", createChatRoutes(io)); // Chat OpenAI format (Inject IO)
-// app.use("/api/stats", ...);
 
 // --- Start ---
 server.listen(PORT, () => {

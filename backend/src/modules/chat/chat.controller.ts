@@ -8,6 +8,7 @@ import type {
   GenerateContentResult,
   GenerateContentStreamResult,
 } from "@google/generative-ai";
+import envConfig from "@/config/config";
 
 export class ChatController {
   private io: Server;
@@ -18,8 +19,10 @@ export class ChatController {
 
   // Entry point cho Route gọi vào
   public handleChat = async (req: Request, res: Response) => {
-    // Gọi hàm xử lý nội bộ với danh sách key đã thử rỗng []
-    await this.processRequest(req, res, []);
+    const maxRetries = envConfig.MAX_RETRIES;
+    let attempt = 0;
+    let success = false;
+    let currentKey: string | null = null;
   };
 
   // Hàm logic chính (Refactor từ handleRequest cũ)
@@ -145,7 +148,9 @@ export class ChatController {
       this.logSuccess(key, model, reqId, "Stream Success.");
     } catch (streamError) {
       const errorMessage =
-        streamError instanceof Error ? streamError.message : "Unknown error";
+        streamError instanceof Error
+          ? streamError.message
+          : String(streamError);
       console.error("Stream processing error:", errorMessage);
       statsService.trackRequest(key, model, false);
       await keyService.incrementUsage(key, true);
@@ -207,8 +212,7 @@ export class ChatController {
     attemptedKeys: string[],
     reqId: string,
   ) => {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const isRateLimit =
       errorMessage.includes("429") ||
       errorMessage.includes("Quota") ||
@@ -244,7 +248,7 @@ export class ChatController {
       statsService.trackRequest(key, model, false);
       res.status(500).json({
         error: {
-          message: error instanceof Error ? error.message : "Unknown error",
+          message: error instanceof Error ? error.message : String(error),
         },
       });
     }
