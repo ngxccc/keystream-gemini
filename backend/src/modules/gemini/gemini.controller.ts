@@ -31,6 +31,7 @@ export class GeminiController {
         },
       });
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: "Failed to refresh models" });
     }
   };

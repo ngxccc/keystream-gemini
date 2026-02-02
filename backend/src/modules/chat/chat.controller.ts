@@ -1,14 +1,14 @@
-import { Server } from "socket.io";
+import type { Server } from "socket.io";
 import { keyService } from "../keys/key.service";
 import { geminiService } from "../gemini/gemini.service";
 import { statsService } from "../stats/stats.service";
 import type { Request, Response } from "express";
-import type { IChatRequestBody, IGenerationConfig } from "@/common/types";
 import type {
   GenerateContentResult,
   GenerateContentStreamResult,
 } from "@google/generative-ai";
 import envConfig from "@/config/config";
+import type { IChatRequestBody, IGenerationConfig } from "@shared/types";
 
 export class ChatController {
   private io: Server;

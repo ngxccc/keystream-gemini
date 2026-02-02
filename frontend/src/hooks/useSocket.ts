@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LogEntry } from "@/shared/types";
 import type { ApiKeyDTO } from "@shared/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
@@ -12,14 +12,10 @@ interface Stats {
   avg: number;
 }
 
+const SOCKET_URL = import.meta.env.DEV ? "http://localhost:13337" : "/";
+
 export const useSocket = () => {
-  const [socket] = useState<Socket>(() =>
-    io({
-      path: "/socket.io",
-      transports: ["websocket", "polling"],
-      reconnectionAttempts: 5,
-    }),
-  );
+  const socketRef = useRef<Socket | null>(null);
 
   const [stats, setStats] = useState<Stats>({
     total: 0,
@@ -34,6 +30,15 @@ export const useSocket = () => {
   const [trafficData, setTrafficData] = useState<number[]>(Array(30).fill(0));
 
   useEffect(() => {
+    socketRef.current ??= io(SOCKET_URL, {
+      path: "/socket.io",
+      transports: ["websocket", "polling"], // Thử websocket trước, fail thì polling
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    const socket = socketRef.current;
+
     const fetchKeys = async () => {
       try {
         const res = await fetch("/api/keys");
@@ -47,11 +52,19 @@ export const useSocket = () => {
     };
 
     const onConnect = () => {
+      console.log("🟢 Socket Connected:", socket.id);
       setIsConnected(true);
       void fetchKeys();
     };
 
-    const onDisconnect = () => setIsConnected(false);
+    const onDisconnect = (reason: string) => {
+      console.log("🔴 Socket Disconnected:", reason);
+      setIsConnected(false);
+    };
+
+    const onConnectError = (err: Error) => {
+      console.error("⚠️ Socket Connection Error:", err.message);
+    };
 
     const onStats = (data: Stats) => setStats(data);
 
@@ -75,6 +88,7 @@ export const useSocket = () => {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
     socket.on("stats", onStats);
     socket.on("log", onLog);
     socket.on("stats_update", onStatsUpdate);
@@ -90,8 +104,9 @@ export const useSocket = () => {
       socket.off("stats_update", onStatsUpdate);
       socket.off("traffic_update", onTrafficUpdate);
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, [socket]);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -105,5 +120,12 @@ export const useSocket = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return { socket, isConnected, logs, keys, trafficData, stats };
+  return {
+    socket: socketRef.current,
+    isConnected,
+    logs,
+    keys,
+    trafficData,
+    stats,
+  };
 };
