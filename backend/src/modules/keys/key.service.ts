@@ -1,15 +1,13 @@
 import envConfig from "@/config/config";
-import type { ApiKey } from "@/generated";
 import { PrismaClient } from "@/generated/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
+import type { ApiKeyDTO } from "@shared/types";
 
 const adapter = new PrismaLibSql({
   url: process.env.DATABASE_URL,
 });
 
 const prisma = new PrismaClient({ adapter });
-
-type ApiKeyDTO = Omit<ApiKey, "lastUsed"> & { lastUsed: number };
 
 export class KeyService {
   public async getAndLockOptimalKey(): Promise<string | null> {
@@ -74,11 +72,11 @@ export class KeyService {
       });
       return true;
     } catch (e) {
+      console.log(e);
       return false; // Lỗi trùng key
     }
   }
 
-  // Lấy list key (cho Dashboard)
   public async getAllKeys(): Promise<ApiKeyDTO[]> {
     const keys = await prisma.apiKey.findMany();
 

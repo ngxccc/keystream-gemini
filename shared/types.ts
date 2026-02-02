@@ -52,3 +52,13 @@ export interface IChatRequestBody {
   topP?: number;
   topK?: number;
 }
+
+export interface ApiKeyDTO {
+  key: string;
+  status: string;
+  usageSession?: number;
+  errorsSession?: number;
+  totalReq?: number;
+  lastUsed: number;
+  createdAt?: string | Date;
+}

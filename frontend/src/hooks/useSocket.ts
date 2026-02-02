@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { LogEntry } from "@/shared/types";
+import type { ApiKeyDTO } from "@shared/types";
 import { useEffect, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
-
-interface LogEntry {
-  timestamp?: string;
-  message?: string;
-  [key: string]: any;
-}
 
 interface Stats {
   total: number;
@@ -17,50 +13,86 @@ interface Stats {
 }
 
 export const useSocket = () => {
-  const [socket] = useState<Socket>(() => io({ path: "/socket.io" }));
+  const [socket] = useState<Socket>(() =>
+    io({
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
+    }),
+  );
+
   const [stats, setStats] = useState<Stats>({
     total: 0,
     successRate: 0,
     errors: 0,
     avg: 0,
   });
+
   const [isConnected, setIsConnected] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [keys, setKeys] = useState<any[]>([]);
+  const [keys, setKeys] = useState<ApiKeyDTO[]>([]);
   const [trafficData, setTrafficData] = useState<number[]>(Array(30).fill(0));
 
   useEffect(() => {
-    // Kết nối về chính host hiện tại (nhờ Vite Proxy lo phần port)
-    socket.on("connect", () => setIsConnected(true));
-    socket.on("disconnect", () => setIsConnected(false));
+    const fetchKeys = async () => {
+      try {
+        const res = await fetch("/api/keys");
+        if (res.ok) {
+          const data = (await res.json()) as ApiKeyDTO[];
+          setKeys(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial keys:", error);
+      }
+    };
 
-    socket.on("stats", (data: Stats) => {
-      setStats(data);
-    });
+    const onConnect = () => {
+      setIsConnected(true);
+      void fetchKeys();
+    };
 
-    socket.on("log", (log: LogEntry) => {
-      setLogs((prev) => [...prev.slice(-199), log]); // Giữ 200 log cuối
-    });
+    const onDisconnect = () => setIsConnected(false);
 
-    socket.on("stats_update", (updatedKeys: any[]) => {
+    const onStats = (data: Stats) => setStats(data);
+
+    const onLog = (log: LogEntry) => {
+      setLogs((prev) => [...prev.slice(-199), log]);
+    };
+
+    const onStatsUpdate = (updatedKeys: any[]) => {
+      // Socket báo có biến -> Cập nhật lại list key
+      console.log("Socket received keys update:", updatedKeys.length);
       setKeys(updatedKeys);
-    });
+    };
 
-    socket.on("traffic_update", () => {
+    const onTrafficUpdate = () => {
       setTrafficData((prev) => {
         const newData = [...prev];
         newData[newData.length - 1] += 1;
         return newData;
       });
-    });
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("stats", onStats);
+    socket.on("log", onLog);
+    socket.on("stats_update", onStatsUpdate);
+    socket.on("traffic_update", onTrafficUpdate);
+
+    fetchKeys().catch((e) => console.error("Initial fetch failed", e));
 
     return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("stats", onStats);
+      socket.off("log", onLog);
+      socket.off("stats_update", onStatsUpdate);
+      socket.off("traffic_update", onTrafficUpdate);
       socket.disconnect();
-      socket.off("stats");
     };
   }, [socket]);
 
-  // Update chart theo interval (giống logic cũ của bạn)
   useEffect(() => {
     const interval = setInterval(() => {
       setTrafficData((prev) => {

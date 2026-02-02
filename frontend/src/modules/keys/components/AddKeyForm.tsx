@@ -45,6 +45,7 @@ export function AddKeyForm() {
       }
     } catch (e) {
       toast.warning("Lỗi mạng");
+      console.log(e);
     } finally {
       setLoading(false);
     }
