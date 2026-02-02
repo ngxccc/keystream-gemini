@@ -19,10 +19,11 @@ class StatsService {
     try {
       if (existsSync(HISTORY_FILE)) {
         const raw = readFileSync(HISTORY_FILE, "utf8");
-        this.stats = { ...this.stats, ...JSON.parse(raw) };
+        const parsed = JSON.parse(raw) as typeof this.stats;
+        this.stats = { ...this.stats, ...parsed };
         console.log("📊 Stats loaded.");
       } else {
-        this.saveStats();
+        void this.saveStats();
       }
     } catch (e) {
       console.error("Error loading stats:", e);
@@ -42,7 +43,7 @@ class StatsService {
 
   private scheduleSave() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.saveStats(), 10000);
+    this.saveTimer = setTimeout(() => void this.saveStats(), 10000);
   }
 
   public trackRequest(key: string, model: string, isSuccess: boolean) {

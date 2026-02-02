@@ -42,3 +42,13 @@ export interface ICategorizedModels {
   video: string[]; // Model tạo video (predictLongRunning - Veo)
   embedding: string[]; // Model embedding (embedContent)
 }
+
+export interface IChatRequestBody {
+  model?: string;
+  stream?: boolean;
+  messages?: IMessage[];
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  topK?: number;
+}

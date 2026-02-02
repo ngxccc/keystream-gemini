@@ -5,11 +5,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "node:http";
 import envConfig from "./config/config";
-import keyRoutes from "./modules/keys/key.routes";
-import { createChatRoutes } from "./modules/chat/chat.routes";
-import { geminiService } from "./modules/gemini/gemini.service";
-import { statsService } from "./modules/stats/stats.service";
-import { createGeminiRoutes } from "./modules/gemini/gemini.routes";
+import { createGeminiRoutes, geminiService } from "./modules/gemini";
+import { statsService } from "./modules/stats";
+import { keyRoutes } from "./modules/keys";
+import { createChatRoutes } from "./modules/chat";
 
 const app = express();
 const server = createServer(app);
