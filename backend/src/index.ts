@@ -9,6 +9,7 @@ import keyRoutes from "./modules/keys/key.routes";
 import { createChatRoutes } from "./modules/chat/chat.routes";
 import { geminiService } from "./modules/gemini/gemini.service";
 import { statsService } from "./modules/stats/stats.service";
+import { createGeminiRoutes } from "./modules/gemini/gemini.routes";
 
 const app = express();
 const server = createServer(app);
@@ -39,10 +40,50 @@ try {
 }
 
 // --- Routes Wiring ---
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 app.use("/api/keys", keyRoutes); // Quản lý Key
 app.use("/v1/chat", createChatRoutes(io)); // Chat OpenAI format (Inject IO)
+app.use("/api/gemini", createGeminiRoutes(io));
+
+app.use((_req, res) => {
+  res.status(404).json({
+    error: { message: "Endpoint not found", code: 404 },
+  });
+});
+
+// TODO: tách ra một file
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error("🔥 Unhandled Error:", err);
+    res.status(500).json({
+      error: {
+        message: "Internal Server Error",
+        details: err instanceof Error ? err.message : String(err),
+      },
+    });
+  },
+);
 
 // --- Start ---
 server.listen(PORT, () => {
   console.log(`🚀 Proxy running at http://localhost:${PORT}`);
+});
+
+process.on("SIGINT", () => {
+  void (() => {
+    console.log("\n🛑 Shutting down gracefully...");
+    void io.close();
+    server.close(() => {
+      console.log("✅ Server closed");
+      process.exit(0);
+    });
+  })();
 });
