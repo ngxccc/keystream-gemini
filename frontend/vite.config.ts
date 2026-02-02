@@ -5,7 +5,6 @@ import { resolve } from "node:path";
 
 // https://vite.dev/config/
 export default defineConfig({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
@@ -22,6 +21,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+      "@shared": resolve(__dirname, "../shared"),
     },
   },
 });

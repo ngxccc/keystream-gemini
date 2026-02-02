@@ -10,7 +10,7 @@ import type {
   IGeminiModelListResponse,
   IGenerationConfig,
   IMessage,
-} from "@/common/types";
+} from "@shared/types";
 
 class GeminiService {
   private models: ICategorizedModels = {
