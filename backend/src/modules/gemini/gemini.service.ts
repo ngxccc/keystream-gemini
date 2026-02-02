@@ -118,7 +118,7 @@ class GeminiService {
     ];
   }
 
-  public getDynamicModels() {
+  public getAllModelCategories() {
     return this.models;
   }
 
