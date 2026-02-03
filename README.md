@@ -11,15 +11,6 @@ KeyStream-Gemini is a high-performance reverse proxy designed to optimize Google
 - **Native Streaming Support**: Optimized handling of Server-Sent Events (SSE) for fluid AI interactions.
 - **OpenAI Compatibility**: Standardized interface for seamless integration with tools like Continue.dev.
 
-## 📺 Video Tutorial & Demo
-
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=C7CeLLUwUDg">
-    <img src="https://i.postimg.cc/RhdzH2sF/image-(1).png" alt="Watch Setup Guide" width="100%" style="max-width: 600px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-  </a>
-  <p><i>See how to bypass rate limits and integrate with Unity in 5 minutes.</i></p>
-</div>
-
 ## Installation
 
 ### Prerequisites
