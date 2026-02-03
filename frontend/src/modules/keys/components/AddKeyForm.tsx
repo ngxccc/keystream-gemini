@@ -30,8 +30,6 @@ export function AddKeyForm() {
       });
       const data = (await res.json()) as AddKeyResponse;
 
-      console.log(data);
-
       if (data.success) {
         toast.success("Thành công! 🎉", {
           description: "Key đã được thêm vào pool.",
