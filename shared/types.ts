@@ -1,10 +1,3 @@
-export interface IGenerationConfig {
-  temperature?: number;
-  maxOutputTokens?: number;
-  topP?: number;
-  topK?: number;
-}
-
 export interface IMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -17,7 +10,7 @@ export interface ILogEntry {
   timestamp: string;
 }
 
-export interface IGeminiModel {
+export interface IGeminiModelDTO {
   name: string;
   version: string;
   displayName: string;
@@ -33,7 +26,7 @@ export interface IGeminiModel {
 }
 
 export interface IGeminiModelListResponse {
-  models: IGeminiModel[];
+  models: IGeminiModelDTO[];
 }
 
 export interface ICategorizedModels {

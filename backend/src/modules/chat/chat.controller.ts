@@ -3,12 +3,10 @@ import { keyService } from "../keys/key.service";
 import { geminiService } from "../gemini/gemini.service";
 import { statsService } from "../stats/stats.service";
 import type { Request, Response } from "express";
-import type {
-  GenerateContentResult,
-  GenerateContentStreamResult,
-} from "@google/generative-ai";
+import { ApiError } from "@google/genai";
 import envConfig from "@/config/config";
-import type { IChatRequestBody, IGenerationConfig } from "@shared/types";
+import type { IChatRequestBody } from "@shared/types";
+import type { GenerateContentConfig } from "@google/genai";
 
 export class ChatController {
   private io: Server;
@@ -49,6 +47,9 @@ export class ChatController {
           }
           break;
         }
+
+        // console.log("Key hiện tại đang dùng: ", currentKey);
+        // console.log("Body của handleChat: ", req.body);
 
         this.io.emit("log", {
           id: requestId,
@@ -142,20 +143,20 @@ export class ChatController {
     res: Response,
     key: string,
     model: string,
-    config: IGenerationConfig,
+    config: GenerateContentConfig,
     reqId: string,
   ) => {
     if (!req.body.messages) {
-      throw new Error("Messages are required");
+      return res.status(400).json({ error: "Messages are required" });
     }
 
-    const result = (await geminiService.generateContent(
+    const result = await geminiService.generateContent(
       key,
       model,
       req.body.messages,
       config,
       true,
-    )) as GenerateContentStreamResult;
+    );
 
     // Chỉ set header khi chắc chắn có result
     res.setHeader("Content-Type", "text/event-stream");
@@ -165,21 +166,46 @@ export class ChatController {
     let isClientConnected = true;
     req.on("close", () => (isClientConnected = false));
 
-    for await (const chunk of result.stream) {
-      if (!isClientConnected) break;
-      const text = chunk.text();
-      if (text) {
-        const chunkData = {
-          id: reqId,
-          object: "chat.completion.chunk",
-          created: Math.floor(Date.now() / 1000),
-          model: model,
-          choices: [
-            { delta: { content: text }, index: 0, finish_reason: null },
-          ],
-        };
-        res.write(`data: ${JSON.stringify(chunkData)}\n\n`);
+    try {
+      if (Symbol.asyncIterator in result) {
+        for await (const chunk of result) {
+          if (!isClientConnected) break;
+
+          const text = chunk.text;
+
+          if (text) {
+            const chunkData = {
+              id: reqId,
+              object: "chat.completion.chunk",
+              created: Math.floor(Date.now() / 1000),
+              model: model,
+              choices: [
+                { delta: { content: text }, index: 0, finish_reason: null },
+              ],
+            };
+            res.write(`data: ${JSON.stringify(chunkData)}\n\n`);
+          }
+
+          if (chunk.usageMetadata) {
+            const usagePayload = {
+              id: reqId,
+              object: "chat.completion.chunk",
+              created: Math.floor(Date.now() / 1000),
+              model: model,
+              choices: [], // Mảng rỗng báo hiệu đây là chunk metadata
+              usage: {
+                prompt_tokens: chunk.usageMetadata.promptTokenCount,
+                completion_tokens: chunk.usageMetadata.candidatesTokenCount,
+                total_tokens: chunk.usageMetadata.totalTokenCount,
+              },
+            };
+            res.write(`data: ${JSON.stringify(usagePayload)}\n\n`);
+          }
+        }
       }
+    } catch (error) {
+      console.error("Stream error:", error);
+      res.write(`data: {"error": ${String(error)}}\n\n`);
     }
 
     if (isClientConnected) {
@@ -195,39 +221,61 @@ export class ChatController {
     res: Response,
     key: string,
     model: string,
-    config: IGenerationConfig,
+    config: GenerateContentConfig,
     reqId: string,
   ) => {
     if (!req.body.messages) {
-      throw new Error("Messages are required");
+      return res.status(400).json({ error: "Messages are required" });
     }
 
-    const result = (await geminiService.generateContent(
+    const result = await geminiService.generateContent(
       key,
       model,
       req.body.messages,
       config,
       false,
-    )) as GenerateContentResult;
+    );
 
-    const response = result.response;
-    const text = response.text();
+    try {
+      if (Symbol.asyncIterator in result) {
+        throw new Error("Expected non-stream result but got stream");
+      }
 
-    await this.logSuccess(key, model, reqId, "Request finished successfully.");
+      const text = result.text;
 
-    res.json({
-      id: reqId,
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: model,
-      choices: [
-        {
-          message: { role: "assistant", content: text },
-          finish_reason: "stop",
-          index: 0,
+      await this.logSuccess(
+        key,
+        model,
+        reqId,
+        "Request finished successfully.",
+      );
+
+      return res.json({
+        id: reqId,
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: model,
+        choices: [
+          {
+            message: { role: "assistant", content: text },
+            finish_reason: "stop",
+            index: 0,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Non Stream error:", error);
+      const status = error instanceof ApiError ? error.status : 500;
+      const message = error instanceof Error ? error.message : String(error);
+
+      return res.status(status).json({
+        error: {
+          message: message,
+          type: error instanceof Error ? error.message : "unknown_error",
+          code: status,
         },
-      ],
-    });
+      });
+    }
   };
 
   private async logSuccess(
@@ -246,19 +294,20 @@ export class ChatController {
     });
   }
 
-  private buildGenerationConfig(body: IChatRequestBody): IGenerationConfig {
-    const config: Partial<IGenerationConfig> = {
-      temperature: body.temperature,
-      maxOutputTokens: body.maxTokens,
+  private buildGenerationConfig(body: IChatRequestBody): GenerateContentConfig {
+    const config: Partial<GenerateContentConfig> = {
+      temperature: body.temperature ?? 0.1,
+      maxOutputTokens: body.maxTokens ?? 8192,
       topP: body.topP,
       topK: body.topK,
     };
+
     // Xóa các key undefined để tránh gửi rác lên Google
     Object.keys(config).forEach(
       (key) =>
-        config[key as keyof IGenerationConfig] === undefined &&
-        delete config[key as keyof IGenerationConfig],
+        config[key as keyof GenerateContentConfig] === undefined &&
+        delete config[key as keyof GenerateContentConfig],
     );
-    return config as IGenerationConfig;
+    return config;
   }
 }

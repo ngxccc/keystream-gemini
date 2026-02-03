@@ -1,14 +1,14 @@
 import {
-  GoogleGenerativeAI,
+  GoogleGenAI,
   HarmBlockThreshold,
   HarmCategory,
-} from "@google/generative-ai";
+  type GenerateContentConfig,
+} from "@google/genai";
 import { keyService } from "../keys/key.service";
 import envConfig from "@/config/config";
 import type {
   ICategorizedModels,
   IGeminiModelListResponse,
-  IGenerationConfig,
   IMessage,
 } from "@shared/types";
 
@@ -137,19 +137,16 @@ class GeminiService {
     apiKey: string,
     modelName: string,
     messages: IMessage[],
-    generationConfig: IGenerationConfig = {},
+    generationConfig: GenerateContentConfig = {},
     stream = false,
   ) {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey: apiKey });
+
     const { contents, systemInstruction } = this.mapMessagesToGemini(messages);
 
-    if (modelName.includes("thinking")) {
-      // Có thể override config ở đây nếu cần thiết
-    }
-
-    const model = genAI.getGenerativeModel({
-      model: modelName,
+    const finalConfig: GenerateContentConfig = {
       systemInstruction,
+
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -168,12 +165,39 @@ class GeminiService {
           threshold: HarmBlockThreshold.BLOCK_NONE,
         },
       ],
-    });
 
-    if (stream) {
-      return await model.generateContentStream({ contents, generationConfig });
-    } else {
-      return await model.generateContent({ contents, generationConfig });
+      ...generationConfig,
+    };
+
+    if (modelName.includes("thinking") || modelName.includes("gemini-2.5")) {
+      // Gemini 2.5/3 cần thinkingConfig. Budget tối thiểu cho 2.5 là 128 token.
+      finalConfig.thinkingConfig = {
+        includeThoughts: true, // Để xem quá trình suy nghĩ (Gemini 3)
+        // thinkingBudget: 1024, // Dành cho Gemini 2.5 nếu cần giới hạn token suy nghĩ
+      };
+    }
+
+    try {
+      if (stream) {
+        const responseStream = await ai.models.generateContentStream({
+          model: modelName,
+          contents,
+          config: finalConfig,
+        });
+        return responseStream;
+      } else {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents,
+          config: finalConfig,
+        });
+
+        console.log("Response Text:", response.text);
+        return response;
+      }
+    } catch (error) {
+      console.error("GenAI Error:", error);
+      throw error;
     }
   }
 }
