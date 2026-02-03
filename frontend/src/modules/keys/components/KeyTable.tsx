@@ -1,16 +1,16 @@
 import type { ApiKeyDTO } from "@shared/types";
 import { Hash } from "lucide-react";
-import { KeyTableRow } from "./KeyTableRow";
 import { EmptyState } from "./EmptyState";
+import { KeyTableRow } from "./KeyTableRow";
 
 interface KeyTableProps {
   keys?: ApiKeyDTO[];
+  onDelete?: (keyHash: string) => void;
 }
 
-export const KeyTable = ({ keys = [] }: KeyTableProps) => {
+export const KeyTable = ({ keys = [], onDelete }: KeyTableProps) => {
   return (
     <div className="w-full overflow-hidden bg-white">
-      {/* Container có scroll ngang cho mobile */}
       <div className="custom-scrollbar overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
           {/* --- HEADER --- */}
@@ -23,10 +23,12 @@ export const KeyTable = ({ keys = [] }: KeyTableProps) => {
               </th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-right">Usage (Session)</th>
+              <th className="px-6 py-4 text-right">Total Req</th>
               <th className="px-6 py-4 text-right">Errors</th>
-              <th className="hidden px-6 py-4 text-right md:table-cell">
-                Total Req
-              </th>
+              {/* 👇 CỘT MỚI */}
+              <th className="px-6 py-4 whitespace-nowrap">Last Used</th>
+              <th className="px-6 py-4 whitespace-nowrap">Created At</th>
+              <th className="px-6 py-4 text-center">Actions</th>
             </tr>
           </thead>
 
@@ -35,21 +37,21 @@ export const KeyTable = ({ keys = [] }: KeyTableProps) => {
             {keys.length === 0 ? (
               <EmptyState />
             ) : (
-              keys.map((key, index) => <KeyTableRow key={index} apiKey={key} />)
+              keys.map((key, index) => (
+                <KeyTableRow key={index} apiKey={key} onDelete={onDelete} />
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Footer / Pagination placeholder if needed */}
+      {/* Footer */}
       {keys.length > 0 && (
         <div className="flex justify-between border-t border-slate-200 bg-slate-50/50 px-6 py-3 text-xs text-slate-400">
-          <span>Showing {keys.length} active keys</span>
+          <span>Showing {keys.length} keys</span>
           <span>Pool Health: Good</span>
         </div>
       )}
     </div>
   );
 };
-
-export default KeyTable;
