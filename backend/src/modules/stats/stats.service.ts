@@ -1,9 +1,12 @@
 import { existsSync, promises, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Server } from "socket.io";
 
 const HISTORY_FILE = join(process.cwd(), "history.json");
 
 class StatsService {
+  private io: Server | null = null;
+
   private stats = {
     totalRequests: 0,
     totalSuccess: 0,
@@ -14,6 +17,10 @@ class StatsService {
   };
 
   private saveTimer: NodeJS.Timeout | null = null;
+
+  public attachSocket(io: Server) {
+    this.io = io;
+  }
 
   public initialize() {
     try {
@@ -73,10 +80,40 @@ class StatsService {
     }
 
     this.scheduleSave();
+
+    if (this.io) {
+      this.io.emit("stats", this.getDashboardStats());
+      this.io.emit("traffic_update");
+    }
   }
 
   public getStats() {
     return { ...this.stats };
+  }
+
+  private getDashboardStats() {
+    const total = this.stats.totalRequests;
+    const errors = this.stats.totalErrors;
+    // Tính tỉ lệ thành công (tránh chia cho 0)
+    const successRate =
+      total > 0
+        ? Number(((this.stats.totalSuccess / total) * 100).toFixed(1))
+        : 100;
+
+    // Tính trung bình ngày (Lấy tổng / số ngày đã log)
+    const daysLogged = Object.keys(this.stats.dailyStats).length || 1;
+    const avg = Math.round(total / daysLogged);
+
+    return {
+      total,
+      successRate,
+      errors,
+      avg,
+    };
+  }
+
+  public getCurrentDashboardStats() {
+    return this.getDashboardStats();
   }
 }
 

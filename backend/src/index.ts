@@ -25,6 +25,8 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(morgan("dev"));
 
+statsService.attachSocket(io);
+
 // --- Initialization ---
 try {
   geminiService.initializeModelFetching();
@@ -37,6 +39,10 @@ try {
   );
   process.exit(1);
 }
+
+io.on("connection", (socket) => {
+  socket.emit("stats", statsService.getCurrentDashboardStats());
+});
 
 // --- Routes Wiring ---
 app.get("/health", (_req, res) => {
