@@ -2,6 +2,7 @@ import envConfig from "@/config/config";
 import { PrismaClient } from "@/generated/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import type { ApiKeyDTO } from "@shared/types";
+import { statsService } from "../stats";
 
 const adapter = new PrismaLibSql({
   url: process.env.DATABASE_URL,
@@ -78,13 +79,27 @@ export class KeyService {
   }
 
   public async getAllKeys(): Promise<ApiKeyDTO[]> {
-    const keys = await prisma.apiKey.findMany();
+    const keys = await prisma.apiKey.findMany({
+      orderBy: { createdAt: "desc" },
+    });
 
     // Map dữ liệu (TypeScript tự hiểu 'k' là ApiKey, không cần ép kiểu any)
-    return keys.map((k) => ({
-      ...k,
-      lastUsed: Number(k.lastUsed), // TypeScript cho phép convert BigInt -> Number
-    }));
+    return keys.map((k) => {
+      const sessionStats = statsService.getKeySessionStats(k.key);
+
+      return {
+        key: k.key,
+        status: k.status,
+        createdAt: k.createdAt.toISOString(),
+        lastUsed: Number(k.lastUsed),
+
+        totalReq: k.usage,
+        totalErrors: k.errors,
+
+        usageSession: sessionStats.usageSession,
+        errorsSession: sessionStats.errorsSession,
+      };
+    });
   }
 }
 

@@ -52,6 +52,7 @@ export interface ApiKeyDTO {
   usageSession?: number;
   errorsSession?: number;
   totalReq?: number;
+  totalErrors?: number;
   lastUsed: number;
   createdAt?: string | Date;
 }

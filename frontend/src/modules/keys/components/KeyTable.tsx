@@ -24,8 +24,8 @@ export const KeyTable = ({ keys = [], onDelete }: KeyTableProps) => {
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-right">Usage (Session)</th>
               <th className="px-6 py-4 text-right">Total Req</th>
-              <th className="px-6 py-4 text-right">Errors</th>
-              {/* 👇 CỘT MỚI */}
+              <th className="px-6 py-4 text-right">Errors (Session)</th>
+              <th className="px-6 py-4 text-right">Total Errors</th>
               <th className="px-6 py-4 whitespace-nowrap">Last Used</th>
               <th className="px-6 py-4 whitespace-nowrap">Created At</th>
               <th className="px-6 py-4 text-center">Actions</th>

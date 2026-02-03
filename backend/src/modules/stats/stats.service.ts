@@ -115,6 +115,14 @@ class StatsService {
   public getCurrentDashboardStats() {
     return this.getDashboardStats();
   }
+
+  public getKeySessionStats(key: string) {
+    const usage = this.stats.keyUsage[key];
+    return {
+      usageSession: usage?.requests || 0,
+      errorsSession: usage?.errors || 0,
+    };
+  }
 }
 
 export const statsService = new StatsService();

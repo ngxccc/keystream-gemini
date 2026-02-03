@@ -79,6 +79,15 @@ export const KeyTableRow = ({ apiKey, onDelete }: KeyTableRowProps) => {
         </span>
       </td>
 
+      {/* Total Errors */}
+      <td className="px-6 py-4 text-right">
+        <span
+          className={`${(apiKey.totalErrors ?? 0) > 0 ? "rounded bg-rose-50 px-2 py-1 font-bold text-rose-600" : "text-slate-400"}`}
+        >
+          {apiKey.totalErrors ?? 0}
+        </span>
+      </td>
+
       {/* 6. Last Used */}
       <td className="px-6 py-4 text-xs whitespace-nowrap text-slate-500">
         <div className="flex items-center gap-1.5">
